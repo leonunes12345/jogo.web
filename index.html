@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Retro Overdrive: Estrada do Caos | Arcade 2D</title>
+  <meta name="description" content="Jogo de corrida arcade 2D em pixel art com visão top-down, direção fluida, cockpit de telemetria automotiva, 4 biomas e oficina completa.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Teko:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Arcade Cabinet Ambient Container -->
+  <div class="arcade-cabinet" id="arcadeCabinet">
+    
+    <!-- Top Cockpit Bezel Bar -->
+    <header class="arcade-header">
+      <div class="header-led amber"></div>
+      <div class="arcade-title">
+        <span class="telemetry-brand">OVERDRIVE</span>
+        <span class="telemetry-subtitle">PRO RACING TELEMETRY • V3.0</span>
+      </div>
+      <div class="header-cash-pill" id="marqueeCashPill">
+        <span class="cash-icon">💵</span>
+        <span id="marqueeCashVal">$ 100</span>
+      </div>
+    </header>
+
+    <!-- Main Game Frame Screen -->
+    <main class="screen-frame">
+      <!-- CRT Filter Overlay (Subtle scanline depth) -->
+      <div class="crt-overlay" id="crtOverlay"></div>
+      
+      <!-- Canvas Game Viewport -->
+      <canvas id="gameCanvas" width="480" height="720"></canvas>
+
+      <!-- AUTOMOTIVE TELEMETRY HUD (Structured into Top Header & Cockpit Cluster) -->
+      <div class="hud-layer" id="hudLayer">
+        <!-- ÁREA SUPERIOR: Fase atual, nome do cenário, progresso da corrida e dinheiro disponível -->
+        <div class="hud-top-bar">
+          <!-- Stage & Biome Pill -->
+          <div class="hud-module hud-stage-module">
+            <span class="module-tag">FASE <b id="hudStageNum">1</b></span>
+            <span class="module-title" id="hudStageName">DESERTO / ROTA 66</span>
+          </div>
+
+          <!-- Linear Race Progress Gauge -->
+          <div class="hud-module hud-progress-module">
+            <div class="progress-meta">
+              <span class="module-tag">PROGRESSO</span>
+              <span class="progress-dist" id="hudDistText">0 m</span>
+              <span class="progress-pct" id="hudProgressText">0%</span>
+            </div>
+            <div class="telemetry-bar-bg">
+              <div class="telemetry-bar-fill" id="hudProgressBar"></div>
+              <div class="telemetry-pin" id="hudProgressMarker">🏎️</div>
+            </div>
+          </div>
+
+          <!-- Cash & Score Module -->
+          <div class="hud-module hud-economy-module">
+            <div class="economy-row">
+              <span class="module-tag">DISPONÍVEL</span>
+              <span class="cash-val-hud" id="hudLiveCash">$ 100</span>
+            </div>
+            <div class="score-subrow">
+              <span class="score-label">PTS:</span>
+              <span class="score-val-hud" id="hudScore">00000</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ÁREA PRINCIPAL: Pista 100% visível, notificações flutuantes discretas -->
+        <div class="hud-banner-container" id="hudBannerContainer"></div>
+
+        <!-- ÁREA INFERIOR: Velocidade em destaque herói, integridade, nitro e combo -->
+        <div class="hud-bottom-bar">
+          <!-- Cluster Esquerdo: Integridade do Veículo (Escudos + Vidas) -->
+          <div class="hud-cluster cluster-health">
+            <span class="cluster-label">INTEGRIDADE</span>
+            <div class="health-cluster-pips">
+              <!-- Armor Shields (from Blindagem) -->
+              <div class="shields-pips-row" id="shieldsContainer"></div>
+              <!-- Life Hearts -->
+              <div class="hearts-pips-row" id="heartsContainer">
+                <span class="pip-heart active">❤️</span>
+                <span class="pip-heart active">❤️</span>
+                <span class="pip-heart active">❤️</span>
+              </div>
+            </div>
+            <span class="hull-status-sub" id="hudHullStatus">ESTRUTURA 100%</span>
+          </div>
+
+          <!-- Cluster Central (HERÓI): Velocímetro Digital com Tacômetro Amber -->
+          <div class="hud-cluster cluster-speed-hero">
+            <span class="cluster-label-center">VELOCIDADE</span>
+            <div class="speed-display-box">
+              <span class="speed-digits-hero" id="hudSpeed">0</span>
+              <span class="speed-unit-hero">KM/H</span>
+            </div>
+            <!-- Dynamic RPM / Speed Tachometer Segments -->
+            <div class="tacho-bar-track">
+              <div class="tacho-bar-fill" id="hudTachoFill"></div>
+            </div>
+          </div>
+
+          <!-- Cluster Direito: Nitro Overdrive & Multiplicador de Manobras -->
+          <div class="hud-cluster cluster-nitro-combo">
+            <div class="nitro-header-row">
+              <span class="cluster-label">NITRO [ESPAÇO]</span>
+              <span class="nitro-state-pill" id="nitroStatus">PRONTO</span>
+            </div>
+            <div class="nitro-gauge-track">
+              <div class="nitro-gauge-fill" id="hudNitroBar"></div>
+            </div>
+            <!-- Combo Multiplier Badge -->
+            <div class="combo-indicator-row">
+              <span class="combo-title">MANOBRAS:</span>
+              <span class="combo-value-badge" id="hudComboBadge">1.0x COMBO</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Botões de Controle Rápido de Canto (Mute & Pause) -->
+        <div class="hud-controls-quick">
+          <button id="btnSoundToggle" class="quick-icon-btn" title="Silenciar / Ativar Áudio (M)" aria-label="Som">🔊</button>
+          <button id="btnPauseToggle" class="quick-icon-btn" title="Pausar Jogo (P / ESC)" aria-label="Pausa">⏸️</button>
+        </div>
+      </div>
+
+      <!-- UI MENUS OVERLAY -->
+      <!-- 1. Tela Inicial -->
+      <section class="ui-screen active" id="startScreen">
+        <div class="brand-panel">
+          <div class="brand-badge">HIGH-PERFORMANCE ARCADE RACER</div>
+          <h1 class="brand-title">RETRO<br><span class="brand-accent">OVERDRIVE</span></h1>
+          <p class="brand-tagline">4 FAIXAS • 4 BIOMAS • FÍSICA FLUIDA • OFICINA TÉCNICA</p>
+        </div>
+
+        <div class="menu-quick-stats">
+          <div class="stat-badge">
+            <span class="lbl">SALDO DISPONÍVEL</span>
+            <span class="val cash-text" id="startCashVal">$ 100</span>
+          </div>
+          <div class="stat-badge">
+            <span class="lbl">RECORDE PESSOAL</span>
+            <span class="val amber-text" id="startHighScore">00000 PTS</span>
+          </div>
+        </div>
+
+        <div class="controls-guide-compact">
+          <div class="guide-row">
+            <span class="key-pill">⬅️ ➡️</span> ou <span class="key-pill">A D</span>
+            <span>Direção lateral contínua com inércia real</span>
+          </div>
+          <div class="guide-row">
+            <span class="key-pill">ESPAÇO</span>
+            <span>Nitro Overdrive (Impulso & esmaga obstáculos)</span>
+          </div>
+          <div class="guide-row">
+            <span class="key-pill">⬆️ ⬇️</span> ou <span class="key-pill">W S</span>
+            <span>Aceleração gradual / Frenagem</span>
+          </div>
+          <div class="guide-hint">⚡ Passe raspando por outros carros para ativar combos de dinheiro!</div>
+        </div>
+
+        <div class="menu-action-buttons">
+          <button id="btnStartGame" class="btn-action primary-btn">
+            ▶ INICIAR CORRIDA
+          </button>
+          <button id="btnOpenWorkshopStart" class="btn-action secondary-btn">
+            🔧 OFICINA & PREPARAÇÃO
+          </button>
+        </div>
+      </section>
+
+      <!-- 2. Tela de Oficina / Preparação -->
+      <section class="ui-screen" id="workshopScreen">
+        <div class="workshop-container">
+          <header class="workshop-header">
+            <div class="workshop-title-box">
+              <h2 class="workshop-title">🔧 OFICINA MECÂNICA</h2>
+              <span class="workshop-sub">PREPARAÇÃO TÉCNICA & UPGRADES</span>
+            </div>
+            <div class="workshop-balance-pill">
+              <span class="lbl">SALDO:</span>
+              <span class="val cash-val" id="workshopCashVal">$ 100</span>
+            </div>
+          </header>
+
+          <!-- Grid de Melhorias -->
+          <div class="upgrades-grid">
+            <!-- 1. Motor -->
+            <div class="upgrade-card" id="cardMotor">
+              <div class="card-icon">⚙️</div>
+              <div class="card-info">
+                <div class="card-title-row">
+                  <span class="card-name">MOTOR</span>
+                  <span class="card-lvl" id="lvlMotor">LVL 0/3</span>
+                </div>
+                <p class="card-desc" id="descMotor">Aumenta velocidade máxima e aceleração.</p>
+                <div class="card-pips" id="pipsMotor">
+                  <span class="pip"></span><span class="pip"></span><span class="pip"></span>
+                </div>
+              </div>
+              <button class="btn-buy" id="btnBuyMotor">COMPRAR $450</button>
+            </div>
+
+            <!-- 2. Pneus -->
+            <div class="upgrade-card" id="cardPneus">
+              <div class="card-icon">🛞</div>
+              <div class="card-info">
+                <div class="card-title-row">
+                  <span class="card-name">PNEUS</span>
+                  <span class="card-lvl" id="lvlPneus">LVL 0/3</span>
+                </div>
+                <p class="card-desc" id="descPneus">Melhora resposta lateral e controle firme.</p>
+                <div class="card-pips" id="pipsPneus">
+                  <span class="pip"></span><span class="pip"></span><span class="pip"></span>
+                </div>
+              </div>
+              <button class="btn-buy" id="btnBuyPneus">COMPRAR $350</button>
+            </div>
+
+            <!-- 3. Nitro -->
+            <div class="upgrade-card" id="cardNitro">
+              <div class="card-icon">⚡</div>
+              <div class="card-info">
+                <div class="card-title-row">
+                  <span class="card-name">NITRO</span>
+                  <span class="card-lvl" id="lvlNitro">LVL 0/3</span>
+                </div>
+                <p class="card-desc" id="descNitro">Aumenta duração e recarga do turbo.</p>
+                <div class="card-pips" id="pipsNitro">
+                  <span class="pip"></span><span class="pip"></span><span class="pip"></span>
+                </div>
+              </div>
+              <button class="btn-buy" id="btnBuyNitro">COMPRAR $400</button>
+            </div>
+
+            <!-- 4. Blindagem -->
+            <div class="upgrade-card" id="cardBlindagem">
+              <div class="card-icon">🛡️</div>
+              <div class="card-info">
+                <div class="card-title-row">
+                  <span class="card-name">BLINDAGEM</span>
+                  <span class="card-lvl" id="lvlBlindagem">LVL 0/3</span>
+                </div>
+                <p class="card-desc" id="descBlindagem">Escudo de absorção contra impactos.</p>
+                <div class="card-pips" id="pipsBlindagem">
+                  <span class="pip"></span><span class="pip"></span><span class="pip"></span>
+                </div>
+              </div>
+              <button class="btn-buy" id="btnBuyBlindagem">COMPRAR $500</button>
+            </div>
+
+            <!-- 5. Reparos Completos -->
+            <div class="upgrade-card card-repair" id="cardRepair">
+              <div class="card-icon">🧰</div>
+              <div class="card-info">
+                <div class="card-title-row">
+                  <span class="card-name">REPAROS COMPLETOS</span>
+                </div>
+                <p class="card-desc">Restaura 100% da integridade e escudos.</p>
+              </div>
+              <button class="btn-buy" id="btnBuyRepair">REPARAR $150</button>
+            </div>
+          </div>
+
+          <!-- Rodapé da Oficina -->
+          <footer class="workshop-footer">
+            <button id="btnWorkshopBack" class="btn-action secondary-btn">
+              ↩ VOLTAR
+            </button>
+            <button id="btnWorkshopStart" class="btn-action primary-btn">
+              ▶ INICIAR CORRIDA
+            </button>
+            <button id="btnResetProgress" class="btn-danger-tiny" title="Reiniciar todo o progresso">
+              RESETAR
+            </button>
+          </footer>
+        </div>
+      </section>
+
+      <!-- 3. Tela de Pausa -->
+      <section class="ui-screen" id="pauseScreen">
+        <div class="telemetry-modal">
+          <h2 class="modal-title amber-text">CORRIDA PAUSADA</h2>
+          <div class="modal-metrics">
+            <div class="metric-row">
+              <span class="lbl">FASE:</span>
+              <span class="val cyan-text" id="pauseStageText">1 - Deserto</span>
+            </div>
+            <div class="metric-row">
+              <span class="lbl">PONTUAÇÃO:</span>
+              <span class="val amber-text" id="pauseScoreText">0</span>
+            </div>
+            <div class="metric-row">
+              <span class="lbl">SALDO ATUAL:</span>
+              <span class="val cash-text" id="pauseCashText">$ 100</span>
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button id="btnResumeGame" class="btn-action primary-btn">▶ CONTINUAR</button>
+            <button id="btnRestartFromPause" class="btn-action secondary-btn">🔄 REINICIAR</button>
+            <button id="btnOpenWorkshopPause" class="btn-action secondary-btn">🔧 OFICINA</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. Tela de Game Over -->
+      <section class="ui-screen" id="gameOverScreen">
+        <div class="telemetry-modal danger-modal">
+          <h2 class="modal-title red-text">VEÍCULO DESTRUÍDO</h2>
+          <p class="modal-subtitle">A CORRIDA TERMINOU NA ESTRADA</p>
+
+          <div class="summary-grid">
+            <div class="sum-box">
+              <span class="sum-lbl">PONTUAÇÃO FINAL</span>
+              <span class="sum-val amber-text" id="gameOverScore">00000</span>
+            </div>
+            <div class="sum-box">
+              <span class="sum-lbl">DINHEIRO GANHO</span>
+              <span class="sum-val cash-text" id="gameOverCashEarned">+$0</span>
+            </div>
+            <div class="sum-box">
+              <span class="sum-lbl">ULT. PRÓXIMAS</span>
+              <span class="sum-val" id="gameOverDodges">0</span>
+            </div>
+            <div class="sum-box">
+              <span class="sum-lbl">RECORDE</span>
+              <span class="sum-val cyan-text" id="gameOverHighScore">00000</span>
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button id="btnRestartGameOver" class="btn-action primary-btn">
+              🔄 NOVA CORRIDA
+            </button>
+            <button id="btnOpenWorkshopGameOver" class="btn-action secondary-btn">
+              🔧 VISITAR OFICINA
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. Tela de Vitória (Todas as 4 Fases Concluídas!) -->
+      <section class="ui-screen" id="victoryScreen">
+        <div class="telemetry-modal victory-modal">
+          <div class="victory-trophy">🏆</div>
+          <h2 class="modal-title gold-text">VITÓRIA COMPLETA!</h2>
+          <p class="modal-subtitle">VOCÊ CONQUISTOU AS 4 FASES DA ESTRADA DO CAOS</p>
+
+          <div class="summary-grid">
+            <div class="sum-box">
+              <span class="sum-lbl">PONTUAÇÃO TOTAL</span>
+              <span class="sum-val gold-text" id="victoryScore">00000</span>
+            </div>
+            <div class="sum-box">
+              <span class="sum-lbl">RECOMPENSA FINAL</span>
+              <span class="sum-val cash-text" id="victoryCashEarned">+$1.000</span>
+            </div>
+            <div class="sum-box">
+              <span class="sum-lbl">DISTÂNCIA TOTAL</span>
+              <span class="sum-val" id="victoryDistance">6.400 m</span>
+            </div>
+            <div class="sum-box">
+              <span class="sum-lbl">DESVIOS TOTAIS</span>
+              <span class="sum-val" id="victoryDodges">0</span>
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button id="btnRestartVictory" class="btn-action primary-btn">
+              🏁 CORRER NOVAMENTE
+            </button>
+            <button id="btnOpenWorkshopVictory" class="btn-action secondary-btn">
+              🔧 OFICINA & MELHORIAS
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. Banner de Transição de Fase -->
+      <div class="stage-transition-overlay" id="stageTransitionOverlay">
+        <div class="stage-transition-content">
+          <div class="transition-tag">FASE CONCLUÍDA!</div>
+          <h2 class="transition-title" id="transitionTitle">FASE 2: CIDADE NOTURNA</h2>
+          <p class="transition-desc" id="transitionDesc">Prepare-se para o trânsito pesado!</p>
+          <div class="transition-bonus">+2.000 PTS & +$200 BÔNUS!</div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Controles Virtuais por Toque para Celular -->
+    <nav class="touch-controls-bar" id="touchControls">
+      <div class="touch-group touch-left">
+        <button id="btnTouchLeft" class="touch-btn" aria-label="Mover para esquerda">◀</button>
+      </div>
+      <div class="touch-group touch-center">
+        <button id="btnTouchNitro" class="touch-btn nitro-touch-btn" aria-label="Ativar Nitro">
+          <span>⚡</span>
+          <small>TURBO</small>
+        </button>
+      </div>
+      <div class="touch-group touch-right">
+        <button id="btnTouchRight" class="touch-btn" aria-label="Mover para direita">▶</button>
+      </div>
+    </nav>
+
+    <!-- Rodapé Estilo Arcade Bezel -->
+    <footer class="arcade-footer">
+      <div class="cabinet-coin-slot">
+        <span class="coin-led"></span> OVERDRIVE ENGINE v3.0 • COCKPIT AUTOMOTIVO
+      </div>
+      <div class="cabinet-credits">
+        PIXEL ART 2D • DIREÇÃO FLUIDA • 4 BIOMAS
+      </div>
+    </footer>
+  </div>
+
+  <!-- Scripts Modulares em Ordem Estrita de Dependência -->
+  <script src="js/audio.js"></script>
+  <script src="js/workshop.js"></script>
+  <script src="js/sprites.js"></script>
+  <script src="js/particles.js"></script>
+  <script src="js/stage.js"></script>
+  <script src="js/obstacles.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
